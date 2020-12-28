@@ -1,7 +1,6 @@
 #include <SPI.h>
 #include <RH_RF69.h>
 
-
 RH_RF69 rf69(10, 3);
 
 // these must be kept in sync with the transmitter structs
@@ -33,7 +32,6 @@ void loop()
 {
   if (rf69.available())
   {
-    // Should be a message for us now   
     uint8_t buf[sizeof(txdata)];
     uint8_t len = sizeof(txdata);
     txdata data_out;
@@ -41,20 +39,22 @@ void loop()
     {
 //      RH_RF69::printBuffer("", buf, len); // prints out the buffer
       memcpy(&data_out, buf, len);
-      Serial.print("alarm ");
-      Serial.println(data_out.reading.alarm);
-      
-      Serial.print("has_seen_error ");
-      Serial.println(data_out.has_seen_error);
-      
-      Serial.print("gas_header_full ");
-      Serial.println(data_out.reading.gas_header_full);
-      Serial.print("gas_header_empty ");
-      Serial.println(data_out.reading.gas_header_empty);
-//      Serial.print("got request: ");
-//      Serial.println((char*)buf);
-//      Serial.print("RSSI: ");
-//      Serial.println(rf69.lastRssi(), DEC);
+      Serial.print("alarm: ");
+      Serial.print(data_out.reading.alarm);
+      Serial.print(". pump on: ");
+      Serial.print(data_out.pump_on);
+      Serial.print(". has_seen_error: ");
+      Serial.print(data_out.has_seen_error);
+      Serial.print(". gas_header_full: ");
+      Serial.print(data_out.reading.gas_header_full);
+      Serial.print(". gas_header_empty: ");
+      Serial.print(data_out.reading.gas_header_empty);
+      Serial.print(". gas_storage_full: ");
+      Serial.print(data_out.reading.gas_header_full);
+      Serial.print(". gas_storage_empty: ");
+      Serial.print(data_out.reading.gas_storage_empty);
+      Serial.print("\n");
+
     }
     else
     {
