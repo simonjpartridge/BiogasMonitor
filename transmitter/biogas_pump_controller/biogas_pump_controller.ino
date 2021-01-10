@@ -5,6 +5,7 @@
 RH_RF69 rf69(10, 3);        //stuff for radio
 
 const int pump_on_pin = 9;
+
 const int gas_alarm_pin = 8;
 const int gas_header_empty_pin = 7;
 const int gas_header_full_pin = 6;
@@ -14,6 +15,7 @@ const int gas_storage_full_pin = 4;
 boolean pump_state = false;
 
 boolean has_seen_error = false; // have we ever experienced an error
+boolean has_seen_alarm = false;
 
 struct sensor_reading {
   boolean alarm;
@@ -25,6 +27,7 @@ struct sensor_reading {
 
 struct txdata {                               //defines the type of data that is going to be sent by the radio, named txdata
   boolean has_seen_error;
+  boolean has_seen_alarm;
   boolean pump_on;
   sensor_reading reading;
 };
@@ -42,8 +45,7 @@ void setup() {
   pinMode(pump_on_pin, OUTPUT);
   
   set_pump_on_state(false);
-  delay(500);                            //let stuff turn on
-  Serial.begin(9600);  
+  delay(500);                            //let stuff turn on  
 }
 
 void loop() {
@@ -55,8 +57,11 @@ void loop() {
   if(has_error){
     has_seen_error = true;
   }
+   if(reading.alarm){
+     has_seen_alarm = true;
+   }
   
-  if(has_seen_error){
+  if(has_seen_error or has_seen_alarm){
     set_pump_on_state(false);
   }else{
     set_pump_on_state(desired_pump_state);
@@ -67,9 +72,11 @@ void loop() {
   data_to_send.reading = reading;
   data_to_send.pump_on = pump_state;
   data_to_send.has_seen_error = has_seen_error;
+  data_to_send.has_seen_alarm = has_seen_alarm;
 
   radiotx(data_to_send);
 
+  delay(100)                                              //slows loop down to allow for radio to send etc
 }
 
 sensor_reading get_sensor_reading() {     //made function called get_sensor_reading which will return data in the format of the sensor_reading thing laid out earlier
@@ -109,16 +116,10 @@ void setup_radio() {
   delayMicroseconds(100);
   digitalWrite(2, LOW);
   
-  while (!Serial)
-  {
-    //do nothing while waiting for serial to be ready
-  };
-  if (!rf69.init())
-    Serial.println("init failed");
+  rf69.init();
   // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module)
   // No encryption
-  if (!rf69.setFrequency(433.0))
-    Serial.println("setFrequency failed");
+  rf69.setFrequency(433.0);
 
   rf69.setTxPower(50, true);
 
@@ -134,6 +135,5 @@ void radiotx(txdata in) {
   byte data[sizeof(txdata)];
   memcpy(data, &in, sizeof(txdata));
   rf69.send(data, sizeof(data));
-  rf69.waitPacketSent();
-  Serial.println("Message sent");
+  rf69.waitPacketSent(100);
 }

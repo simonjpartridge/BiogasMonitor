@@ -3,6 +3,12 @@
 
 RH_RF69 rf69(10, 3);
 
+const int alarm_light_pin = 8;
+const int error_light_pin = 7;
+const int gas_storage_full_light_pin = 6;
+const int gas_storage_empty_light_pin = 5;
+const int pump_on_light_pin = 4;
+
 // these must be kept in sync with the transmitter structs
 struct sensor_reading {
   boolean alarm;
@@ -14,12 +20,18 @@ struct sensor_reading {
 
 struct txdata {
   boolean has_seen_error;
+  boolean has_seen_alarm;
   boolean pump_on;
   sensor_reading reading;
 };
 
 void setup() 
 {
+  pinMode(alarm_light_pin, OUTPUT);
+  pinMode(error_light_pin, OUTPUT);
+  pinMode(gas_storage_full_light_pin, OUTPUT);
+  pinMode(gas_storage_empty_light_pin, OUTPUT);
+  pinMode(pump_on_light_pin, OUTPUT);
   Serial.begin(9600);
   Serial.println("start setup");
   while (!Serial) 
@@ -54,7 +66,11 @@ void loop()
       Serial.print(". gas_storage_empty: ");
       Serial.print(data_out.reading.gas_storage_empty);
       Serial.print("\n");
-
+digitalWrite(alarm_light_pin, data_out.has_seen_alarm);
+digitalWrite(error_light_pin, data_out.has_seen_error);
+digitalWrite(gas_storage_full_light_pin, data_out.reading.gas_storage_full);
+digitalWrite(gas_storage_empty_light_pin, data_out.reading.gas_storage_empty);
+digitalWrite(pump_on_light_pin, data_out.pump_on);
     }
     else
     {
@@ -80,13 +96,13 @@ void setupRadio(){
   if (!rf69.setFrequency(433.0))
     Serial.println("setFrequency failed");
 
-  // If you are using a high power RF69 eg RFM69HW, you *must* set a Tx power with the
-  // ishighpowermodule flag set like this:
   rf69.setTxPower(14, true);
 
-  // The encryption key has to be the same as the one in the client
   uint8_t key[] = { 0x09, 0x06, 0x01, 0x04, 0x05, 0x06, 0x07, 0x08,
                     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   rf69.setEncryptionKey(key);
   Serial.println("finished setup");
 }
+
+
+
