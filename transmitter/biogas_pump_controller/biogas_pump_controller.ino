@@ -33,9 +33,7 @@ struct txdata {                               //defines the type of data that is
 };
 
 void setup() {
- setup_radio(); 
-pinMode(0, INPUT);                                    //FOR TESTING, REMOVE BEFORE USE                            
-digitalWrite(0, HIGH);                                //FOR TESTING, REMOVE BOFORE USE
+  setup_radio(); 
   pinMode(gas_header_empty_pin, INPUT);
   pinMode(gas_header_full_pin, INPUT);
   pinMode(gas_alarm_pin, INPUT);
@@ -116,12 +114,12 @@ void setup_radio() {
  delayMicroseconds(100);
  digitalWrite(2, LOW);
   
- rf69.init();
+ while(!rf69.init());
  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module)
  // No encryption
  rf69.setFrequency(433.0);
 
- rf69.setTxPower(50, true);
+ rf69.setTxPower(16, true);             //sets tx power in dBm
 
  // The encryption key has to be the same as the one in the server
  uint8_t key[] = { 0x09, 0x06, 0x01, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -141,11 +139,11 @@ void setup_radio() {
 
 //new radio code
 void radiotx(txdata in) {
- if(rf69.waitpacketsent(100)) {
+ if(rf69.waitPacketSent(200)) {
   byte data[sizeof(txdata)];
   memcpy(data, &in, sizeof(txdata));
   rf69.send(data, sizeof(data));
   return;
  }
- rf69.reset;
+ setup_radio();                             //calls the function to reset the radio
 }
