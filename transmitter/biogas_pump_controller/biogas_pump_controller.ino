@@ -26,16 +26,16 @@ struct sensor_reading {
 };
 
 struct txdata {                               //defines the type of data that is going to be sent by the radio, named txdata
-  boolean has_seen_error;
-  boolean has_seen_alarm;
-  boolean pump_on;
-  sensor_reading reading;
+ boolean has_seen_error;
+ boolean has_seen_alarm;
+ boolean pump_on;
+ sensor_reading reading;
 };
 
 void setup() {
-  setup_radio(); 
-//pinMode(0, INPUT);                                    //FOR TESTING, REMOVE BEFORE USE                            
-//digitalWrite(0, HIGH);                                //FOR TESTING, REMOVE BOFORE USE
+ setup_radio(); 
+pinMode(0, INPUT);                                    //FOR TESTING, REMOVE BEFORE USE                            
+digitalWrite(0, HIGH);                                //FOR TESTING, REMOVE BOFORE USE
   pinMode(gas_header_empty_pin, INPUT);
   pinMode(gas_header_full_pin, INPUT);
   pinMode(gas_alarm_pin, INPUT);
@@ -68,15 +68,15 @@ void loop() {
   }
   
   
-  txdata data_to_send;
-  data_to_send.reading = reading;
-  data_to_send.pump_on = pump_state;
-  data_to_send.has_seen_error = has_seen_error;
-  data_to_send.has_seen_alarm = has_seen_alarm;
+ txdata data_to_send;
+ data_to_send.reading = reading;
+ data_to_send.pump_on = pump_state;
+ data_to_send.has_seen_error = has_seen_error;
+ data_to_send.has_seen_alarm = has_seen_alarm;
 
-  radiotx(data_to_send);
+ radiotx(data_to_send);
 
-  delay(100)                                              //slows loop down to allow for radio to send etc
+  delay(100);                                              //slows loop down to allow for radio to send etc
 }
 
 sensor_reading get_sensor_reading() {     //made function called get_sensor_reading which will return data in the format of the sensor_reading thing laid out earlier
@@ -110,30 +110,42 @@ void set_pump_on_state(boolean enabled) {
 }
 
 void setup_radio() {
-  //have to reset radio to get it working
-  pinMode(2, OUTPUT);                 
-  digitalWrite(2, HIGH);
-  delayMicroseconds(100);
-  digitalWrite(2, LOW);
+ //have to reset radio to get it working
+ pinMode(2, OUTPUT);                 
+ digitalWrite(2, HIGH);
+ delayMicroseconds(100);
+ digitalWrite(2, LOW);
   
-  rf69.init();
-  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module)
-  // No encryption
-  rf69.setFrequency(433.0);
+ rf69.init();
+ // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module)
+ // No encryption
+ rf69.setFrequency(433.0);
 
-  rf69.setTxPower(50, true);
+ rf69.setTxPower(50, true);
 
-  // The encryption key has to be the same as the one in the server
-  uint8_t key[] = { 0x09, 0x06, 0x01, 0x04, 0x05, 0x06, 0x07, 0x08,
-                    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
-                  };
-  rf69.setEncryptionKey(key);
+ // The encryption key has to be the same as the one in the server
+ uint8_t key[] = { 0x09, 0x06, 0x01, 0x04, 0x05, 0x06, 0x07, 0x08,
+                   0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
+                 };
+ rf69.setEncryptionKey(key);
 }
 
-void radiotx(txdata in) {
+//void radiotx(txdata in) {
+//
+//  byte data[sizeof(txdata)];
+//  memcpy(data, &in, sizeof(txdata));
+//  rf69.send(data, sizeof(data));
+//  rf69.waitPacketSent(100);
+//}
 
+
+//new radio code
+void radiotx(txdata in) {
+ if(rf69.waitpacketsent(100)) {
   byte data[sizeof(txdata)];
   memcpy(data, &in, sizeof(txdata));
   rf69.send(data, sizeof(data));
-  rf69.waitPacketSent(100);
+  return;
+ }
+ rf69.reset;
 }
