@@ -2,7 +2,9 @@
 #include <SPI.h>            //stuff for radio
 #include <RH_RF69.h>        //stuff for radio
 
-RH_RF69 rf69(10, 3);        //stuff for radio
+#define IS_RFM69HCW
+
+RH_RF69 rf69(10, 2);        //stuff for radio
 
 const int pump_on_pin = 9;
 
@@ -77,7 +79,7 @@ void loop() {
 
  radiotx(data_to_send);
 
-  delay(200);                                              //slows loop down to allow for radio to send etc
+ delay(200);                                              //slows loop down to allow for radio to send etc
 }
 
 sensor_reading get_sensor_reading() {     //made function called get_sensor_reading which will return data in the format of the sensor_reading thing laid out earlier
@@ -117,12 +119,14 @@ void setup_radio() {
  delayMicroseconds(100);
  digitalWrite(2, LOW);
   
- while(!rf69.init());
+ if (!rf69.init()){
+   Serial.println("init failed")
+ }
  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module)
  // No encryption
  rf69.setFrequency(433.0);
 
- rf69.setTxPower(16, true);             //sets tx power in dBm
+ rf69.setTxPower(13, true);             //sets tx power in dBm
 
  // The encryption key has to be the same as the one in the server
  uint8_t key[] = { 0x09, 0x06, 0x01, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -143,13 +147,14 @@ void setup_radio() {
 //new radio code
 void radiotx(txdata in) {
  if(rf69.waitPacketSent(200)) {
+   
   byte data[sizeof(txdata)];
   memcpy(data, &in, sizeof(txdata));
-  Serial.println("gonna set idle");
-  rf69.setModeIdle();
+
+  rf69.setModeTx();
   delay(50);
   Serial.println("gonna send");
-  rf69.send(data, sizeof(data));
+  rf69.send(data, sizeof(txdata));
   Serial.println("sent");
   if(!rf69.waitPacketSent(200)){
     setup_radio();
