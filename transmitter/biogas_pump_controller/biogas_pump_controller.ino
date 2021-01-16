@@ -39,16 +39,19 @@ void setup() {
   pinMode(gas_alarm_pin, INPUT);
   pinMode(gas_storage_empty_pin, INPUT);
   pinMode(gas_storage_full_pin, INPUT);
-  
+
   pinMode(pump_on_pin, OUTPUT);
   
   set_pump_on_state(false);
+
+  Serial.begin(9600);                     //for testing
   delay(500);                            //let stuff turn on  
 }
 
 void loop() {
   sensor_reading reading = get_sensor_reading();            // calls function which checks the input pins and stores them in the variable called reading which is of the type of sensor_reading
 
+  Serial.println(pump_state);                                  //for testing
   boolean desired_pump_state = compute_desired_pump_state(reading, pump_state);
   
   boolean has_error = check_for_error(reading);
@@ -74,7 +77,7 @@ void loop() {
 
  radiotx(data_to_send);
 
-  delay(100);                                              //slows loop down to allow for radio to send etc
+  delay(200);                                              //slows loop down to allow for radio to send etc
 }
 
 sensor_reading get_sensor_reading() {     //made function called get_sensor_reading which will return data in the format of the sensor_reading thing laid out earlier
@@ -142,8 +145,18 @@ void radiotx(txdata in) {
  if(rf69.waitPacketSent(200)) {
   byte data[sizeof(txdata)];
   memcpy(data, &in, sizeof(txdata));
+  Serial.println("gonna set idle");
+  rf69.setModeIdle();
+  delay(50);
+  Serial.println("gonna send");
   rf69.send(data, sizeof(data));
+  Serial.println("sent");
+  if(!rf69.waitPacketSent(200)){
+    setup_radio();
+    Serial.println("radio dead 1");
+  }
   return;
  }
+ Serial.println("radio dead 2");
  setup_radio();                             //calls the function to reset the radio
 }
