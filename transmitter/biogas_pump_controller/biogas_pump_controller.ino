@@ -1,19 +1,25 @@
 
-#include <SPI.h>            //stuff for radio
-#include <RH_RF69.h>        //stuff for radio
+// #include <SPI.h>            //stuff for radio
+// #include <RH_RF69.h>        //stuff for radio
 
-#define IS_RFM69HCW
+// #define IS_RFM69HCW
 
-RH_RF69 rf69(10, 2);        //stuff for radio
+// RH_RF69 rf69(10, 2);        //stuff for radio
 
+//outputs
 const int pump_on_pin = 9;
+const int has_seen_alarm_pin = 13;
+const int has_seen_error_pin = 12;
 
+//inputs
 const int gas_alarm_pin = 8;
 const int gas_header_empty_pin = 7;
 const int gas_header_full_pin = 6;
 const int gas_storage_empty_pin = 5;
 const int gas_storage_full_pin = 4;
 
+unsigned long pump_on_at_millis = 0;
+boolean pump_timer_toggle = false;
 boolean pump_state = false;
 
 boolean has_seen_error = false; // have we ever experienced an error
@@ -27,15 +33,15 @@ struct sensor_reading {
   boolean gas_header_full;
 };
 
-struct txdata {                               //defines the type of data that is going to be sent by the radio, named txdata
- boolean has_seen_error;
- boolean has_seen_alarm;
- boolean pump_on;
- sensor_reading reading;
-};
+// struct txdata {                               //defines the type of data that is going to be sent by the radio, named txdata
+//  boolean has_seen_error;
+//  boolean has_seen_alarm;
+//  boolean pump_on;
+//  sensor_reading reading;
+// };
 
 void setup() {
-  setup_radio(); 
+  // setup_radio(); 
   pinMode(gas_header_empty_pin, INPUT);
   pinMode(gas_header_full_pin, INPUT);
   pinMode(gas_alarm_pin, INPUT);
@@ -43,41 +49,46 @@ void setup() {
   pinMode(gas_storage_full_pin, INPUT);
 
   pinMode(pump_on_pin, OUTPUT);
+  pinMode(has_seen_alarm_pin, OUTPUT);
+  pinMode(has_seen_error_pin, OUTPUT);
   
   set_pump_on_state(false);
 
-  Serial.begin(9600);                     //for testing
+ // Serial.begin(9600);                     //for testing
   delay(500);                            //let stuff turn on  
 }
 
 void loop() {
   sensor_reading reading = get_sensor_reading();            // calls function which checks the input pins and stores them in the variable called reading which is of the type of sensor_reading
 
-  Serial.println(pump_state);                                  //for testing
+  //Serial.println(pump_state);                                  //for testing
   boolean desired_pump_state = compute_desired_pump_state(reading, pump_state);
   
   boolean has_error = check_for_error(reading);
   if(has_error){
     has_seen_error = true;
   }
-   if(reading.alarm){
+  if(reading.alarm){
      has_seen_alarm = true;
    }
   
   if(has_seen_error or has_seen_alarm){
     set_pump_on_state(false);
+    digitalWrite(has_seen_alarm_pin, has_seen_alarm);             //turns lights on for error or alarm
+    digitalWrite(has_seen_error_pin, has_seen_error);
   }else{
-    set_pump_on_state(desired_pump_state);
+    set_pump_on_state(desired_pump_state); 
+      
   }
   
   
- txdata data_to_send;
- data_to_send.reading = reading;
- data_to_send.pump_on = pump_state;
- data_to_send.has_seen_error = has_seen_error;
- data_to_send.has_seen_alarm = has_seen_alarm;
+//  txdata data_to_send;
+//  data_to_send.reading = reading;
+//  data_to_send.pump_on = pump_state;
+//  data_to_send.has_seen_error = has_seen_error;
+//  data_to_send.has_seen_alarm = has_seen_alarm;
 
- radiotx(data_to_send);
+//  radiotx(data_to_send);
 
  delay(200);                                              //slows loop down to allow for radio to send etc
 }
@@ -103,37 +114,44 @@ boolean compute_desired_pump_state(sensor_reading reading, boolean current_pump_
 boolean check_for_error(sensor_reading reading){
   if(reading.alarm == true) return true;
   if(reading.gas_header_full and reading.gas_header_empty) return true;
-  if(reading.gas_storage_full and reading.gas_storage_empty) return true;
+  if(reading.gas_storage_full and reading.gas_storage_empty) return true;              //if 2 switches get stuck on
+  if((millis() - pump_on_at_millis) > 900000) return true;                            //max time the pump may run for
   return false;
 }
 
 void set_pump_on_state(boolean enabled) {
-  digitalWrite(pump_on_pin, enabled);          //turns pump on or off
+  digitalWrite(pump_on_pin, enabled);                //turns pump on or off
+  if(pump_timer_toggle == !enabled){                //is true when the pump condition changes state
+    if(enabled == true){                            //makes sure the pump is turning on
+      pump_on_at_millis = millis();
+      pump_timer_toggle = enabled;
+  }
+  }
   pump_state = enabled;                       //keeps track of whether the pump is on or off
 }
 
-void setup_radio() {
- //have to reset radio to get it working
- pinMode(2, OUTPUT);                 
- digitalWrite(2, HIGH);
- delayMicroseconds(100);
- digitalWrite(2, LOW);
+// void setup_radio() {
+//  //have to reset radio to get it working
+//  pinMode(2, OUTPUT);                 
+//  digitalWrite(2, HIGH);
+//  delayMicroseconds(100);
+//  digitalWrite(2, LOW);
   
- if (!rf69.init()){
-   Serial.println("init failed")
- }
+//  if (!rf69.init()){
+//    Serial.println("init failed")
+//  }
  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module)
  // No encryption
- rf69.setFrequency(433.0);
+//  rf69.setFrequency(433.0);
 
- rf69.setTxPower(13, true);             //sets tx power in dBm
+//  rf69.setTxPower(13, true);             //sets tx power in dBm
 
- // The encryption key has to be the same as the one in the server
- uint8_t key[] = { 0x09, 0x06, 0x01, 0x04, 0x05, 0x06, 0x07, 0x08,
-                   0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
-                 };
- rf69.setEncryptionKey(key);
-}
+//  // The encryption key has to be the same as the one in the server
+//  uint8_t key[] = { 0x09, 0x06, 0x01, 0x04, 0x05, 0x06, 0x07, 0x08,
+//                    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
+//                  };
+//  rf69.setEncryptionKey(key);
+// }
 
 //void radiotx(txdata in) {
 //
@@ -145,23 +163,23 @@ void setup_radio() {
 
 
 //new radio code
-void radiotx(txdata in) {
- if(rf69.waitPacketSent(200)) {
+// void radiotx(txdata in) {
+//  if(rf69.waitPacketSent(200)) {
    
-  byte data[sizeof(txdata)];
-  memcpy(data, &in, sizeof(txdata));
+//   byte data[sizeof(txdata)];
+//   memcpy(data, &in, sizeof(txdata));
 
-  rf69.setModeTx();
-  delay(50);
-  Serial.println("gonna send");
-  rf69.send(data, sizeof(txdata));
-  Serial.println("sent");
-  if(!rf69.waitPacketSent(200)){
-    setup_radio();
-    Serial.println("radio dead 1");
-  }
-  return;
- }
- Serial.println("radio dead 2");
- setup_radio();                             //calls the function to reset the radio
-}
+//   rf69.setModeTx();
+//   delay(50);
+//   Serial.println("gonna send");
+//   rf69.send(data, sizeof(txdata));
+//   Serial.println("sent");
+//   if(!rf69.waitPacketSent(200)){
+//     setup_radio();
+//     Serial.println("radio dead 1");
+//   }
+//   return;
+//  }
+//  Serial.println("radio dead 2");
+//  setup_radio();                             //calls the function to reset the radio
+// }
