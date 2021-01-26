@@ -19,7 +19,6 @@ const int gas_storage_empty_pin = 5;
 const int gas_storage_full_pin = 4;
 
 unsigned long pump_on_at_millis = 0;
-boolean pump_timer_toggle = false;
 boolean pump_state = false;
 
 boolean has_seen_error = false; // have we ever experienced an error
@@ -113,21 +112,18 @@ boolean compute_desired_pump_state(sensor_reading reading, boolean current_pump_
 }
 boolean check_for_error(sensor_reading reading){
   if(reading.alarm == true) return true;
-  if(reading.gas_header_full && reading.gas_header_empty) return true;
-  if(reading.gas_storage_full && reading.gas_storage_empty) return true;              //if 2 switches get stuck on
-  if(pump_timer_toggle && (millis() - pump_on_at_millis) > 900000) return true;                            //max time the pump may run for (15 mins)
+  if(reading.gas_header_full and reading.gas_header_empty) return true;
+  if(reading.gas_storage_full and reading.gas_storage_empty) return true;               //if 2 switches get stuck on
+  if((pump_state) && ((millis() - pump_on_at_millis) > 900000)) return true;     //max time the pump may run for (15 mins)
   return false;
 }
 
 void set_pump_on_state(boolean enabled) {
-  digitalWrite(pump_on_pin, enabled);                //turns pump on or off
-  if(pump_timer_toggle == !enabled){                //is true when the pump condition changes state
-    if(enabled == true){                            //makes sure the pump is turning on
+  digitalWrite(pump_on_pin, enabled);                            //turns pump on or off
+  if((pump_state == !enabled) and (enabled == true)){            //is true when the pump condition changes from off to on
       pump_on_at_millis = millis();
-      pump_timer_toggle = enabled;
-  }
-  }
-  pump_state = enabled;                       //keeps track of whether the pump is on or off
+    }
+  pump_state = enabled;                                          //keeps track of whether the pump is on or off
 }
 
 // void setup_radio() {
