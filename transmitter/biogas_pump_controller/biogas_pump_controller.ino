@@ -71,7 +71,7 @@ void loop() {
      has_seen_alarm = true;
    }
   
-  if(has_seen_error or has_seen_alarm){
+  if(has_seen_error || has_seen_alarm){
     set_pump_on_state(false);
     digitalWrite(has_seen_alarm_pin, has_seen_alarm);             //turns lights on for error or alarm
     digitalWrite(has_seen_error_pin, has_seen_error);
@@ -112,15 +112,15 @@ boolean compute_desired_pump_state(sensor_reading reading, boolean current_pump_
 }
 boolean check_for_error(sensor_reading reading){
   if(reading.alarm == true) return true;
-  if(reading.gas_header_full and reading.gas_header_empty) return true;
-  if(reading.gas_storage_full and reading.gas_storage_empty) return true;               //if 2 switches get stuck on
-  if((pump_state) && ((millis() - pump_on_at_millis) > 900000)) return true;     //max time the pump may run for (15 mins)
+  if(reading.gas_header_full && reading.gas_header_empty) return true;
+  if(reading.gas_storage_full && reading.gas_storage_empty) return true;               //if 2 switches get stuck on
+  if((pump_state) && ((millis() - pump_on_at_millis) > 120000)) return true;     //max time the pump may run for (2 mins)
   return false;
 }
 
 void set_pump_on_state(boolean enabled) {
   digitalWrite(pump_on_pin, enabled);                            //turns pump on or off
-  if((pump_state == !enabled) and (enabled == true)){            //is true when the pump condition changes from off to on
+  if((pump_state == !enabled) && (enabled == true)){            //is true when the pump condition changes from off to on
       pump_on_at_millis = millis();
     }
   pump_state = enabled;                                          //keeps track of whether the pump is on or off
