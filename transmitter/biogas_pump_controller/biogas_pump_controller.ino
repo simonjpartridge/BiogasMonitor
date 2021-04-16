@@ -110,11 +110,11 @@ boolean compute_desired_pump_state(sensor_reading reading, boolean current_pump_
     if(reading.gas_header_empty == true) return true;
     return current_pump_state;
 }
-boolean check_for_error(sensor_reading reading){
+boolean check_for_error(sensor_reading reading){ 
   if(reading.alarm == true) return true;
   if(reading.gas_header_full && reading.gas_header_empty) return true;
   if(reading.gas_storage_full && reading.gas_storage_empty) return true;               //if 2 switches get stuck on
-  if((pump_state) && ((millis() - pump_on_at_millis) > 120000)) return true;     //max time the pump may run for (2 mins)
+  if((pump_state) && ((millis() - pump_on_at_millis) > 150000)) return true;     //max time the pump may run for (2:30 mins)
   return false;
 }
 
